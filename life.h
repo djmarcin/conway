@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <functional>
+#include <unordered_set>
 #include <vector>
 
 namespace conway {
@@ -11,10 +12,25 @@ struct Point {
     Point(int64_t x, int64_t y) : x(x), y(y) {}
     Point(const Point &o) : x(o.x), y(o.y) {}
 
-    bool operator=(const Point& o) {
+    bool operator==(const Point& o) const {
         return x == o.x && y == o.y;
     }
 };
+
+}  // namespace conway
+
+namespace std {
+template <>
+struct hash<conway::Point> {
+    hash<int64_t> int64_hash;
+
+    size_t operator() (const conway::Point& p) const {
+        return 31 * int64_hash(p.x) ^ int64_hash(p.y);  // Vaguely stolen from Java.
+    }
+};
+}  // namespace std
+
+namespace conway {
 
 class Life {
     protected:
@@ -46,15 +62,21 @@ class ArrayLife : public Life  {
     void Print() override;
 };
 
-}  // namespace conway
+class LiveLife : public Life {
+    std::unordered_set<Point>* live_points_;
+    std::unordered_set<Point>* new_live_points_;
 
-namespace std {
-template <>
-struct hash<conway::Point> {
-    hash<int64_t> int64_hash;
+    public:
+    LiveLife(int64_t height, int64_t width);
+    ~LiveLife();
 
-    size_t operator() (const conway::Point& p) const {
-        return 31 * int64_hash(p.x) ^ int64_hash(p.y);  // Vaguely stolen from Java.
-    }
+    void AddLivePoint(const Point& p) override;
+    void Step() override;
+    std::vector<const Point> LivePoints() override;
+    void Print() override;
+
+    private:
+    bool IsLiveCell(const Point& p);
 };
-}  // namespace std
+
+}  // namespace conway
