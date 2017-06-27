@@ -1,12 +1,12 @@
 CC = g++
 DEBUG = -g
-CFLAGS = -std=c++11 -Wall -c $(DEBUG)
+CFLAGS = -std=c++11 -Wall -Wno-deprecated -c $(DEBUG)
 LFLAGS = -std=c++11 -Wall $(DEBUG)
 
 OBJS = life.o driver.o
 
 life : $(OBJS)
-	$(CC) $(LFLAGS) $(OBJS) -o life
+	$(CC) $(LFLAGS) $(OBJS) -o life -framework GLUT -framework OpenGL
 
 life.o : life.h life.cc
 	$(CC) $(CFLAGS) life.cc

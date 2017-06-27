@@ -1,3 +1,6 @@
+#ifndef CONWAY_LIFE_H
+#define CONWAY_LIFE_H
+
 #include <cstdint>
 #include <functional>
 #include <unordered_set>
@@ -80,3 +83,5 @@ class LiveLife : public Life {
 };
 
 }  // namespace conway
+
+#endif

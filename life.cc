@@ -78,19 +78,57 @@ void LiveLife::AddLivePoint(const Point& p) {
     live_points_->insert(p);
 }
 
+// void LiveLife::Step() {
+//     std::unordered_set<Point> to_check;
+//     // Add all possibly affected points as well.
+//     for (auto p : LivePoints()) {
+//         to_check.insert(Point((p.x - 1 + width_) % width_, (p.y - 1 + height_) % height_));
+//         to_check.insert(Point((p.x - 1 + width_) % width_, p.y));
+//         to_check.insert(Point((p.x - 1 + width_) % width_, (p.y + 1) % height_));
+//         to_check.insert(Point(p.x, (p.y - 1 + height_) % height_));
+//         to_check.insert(Point(p.x, p.y));
+//         to_check.insert(Point(p.x, (p.y + 1) % height_));
+//         to_check.insert(Point((p.x + 1) % width_, (p.y - 1 + height_) % height_));
+//         to_check.insert(Point((p.x + 1) % width_, p.y));
+//         to_check.insert(Point((p.x + 1) % width_, (p.y + 1) % height_));
+//     }
+//     for (auto p : to_check) {
+//         if (IsLiveCell(p)) {
+//             new_live_points_->insert(p);
+//         }
+//     }
+//     auto* temp = live_points_;
+//     live_points_ = new_live_points_;
+//     new_live_points_ = temp;
+//     new_live_points_->clear();
+// }
+//
+// bool LiveLife::IsLiveCell(const Point& p) {
+//     int accum =
+//         (live_points_->find(Point((p.x - 1 + width_) % width_, (p.y - 1 + height_) % height_)) != live_points_->end()) +
+//         (live_points_->find(Point((p.x - 1 + width_) % width_, p.y)) != live_points_->end()) +
+//         (live_points_->find(Point((p.x - 1 + width_) % width_, (p.y + 1) % height_)) != live_points_->end()) +
+//         (live_points_->find(Point(p.x, (p.y - 1 + height_) % height_)) != live_points_->end()) +
+//         (live_points_->find(Point(p.x, p.y)) != live_points_->end()) +
+//         (live_points_->find(Point(p.x, (p.y + 1) % height_)) != live_points_->end()) +
+//         (live_points_->find(Point((p.x + 1) % width_, (p.y - 1 + height_) % height_)) != live_points_->end()) +
+//         (live_points_->find(Point((p.x + 1) % width_, p.y)) != live_points_->end()) +
+//         (live_points_->find(Point((p.x + 1) % width_, (p.y + 1) % height_)) != live_points_->end());
+//     // If sum is 3, it must be live (either 2 neighbors + self or 3 neighbors).
+//     // If 4, it keeps current state (either 3 neighbors and alive, or 4 neighbors and dead).
+//     return accum == 3 || (accum == 4 && live_points_->find(p) != live_points_->end());
+// }
+
+// This version does not care about overflow because it uses the entire int64 space.
 void LiveLife::Step() {
     std::unordered_set<Point> to_check;
     // Add all possibly affected points as well.
     for (auto p : LivePoints()) {
-        to_check.insert(Point((p.x - 1 + width_) % width_, (p.y - 1 + height_) % height_));
-        to_check.insert(Point((p.x - 1 + width_) % width_, p.y));
-        to_check.insert(Point((p.x - 1 + width_) % width_, (p.y + 1) % height_));
-        to_check.insert(Point(p.x, (p.y - 1 + height_) % height_));
-        to_check.insert(Point(p.x, p.y));
-        to_check.insert(Point(p.x, (p.y + 1) % height_));
-        to_check.insert(Point((p.x + 1) % width_, (p.y - 1 + height_) % height_));
-        to_check.insert(Point((p.x + 1) % width_, p.y));
-        to_check.insert(Point((p.x + 1) % width_, (p.y + 1) % height_));
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                to_check.insert(Point(p.x + dx, p.y + dy));
+            }
+        }
     }
     for (auto p : to_check) {
         if (IsLiveCell(p)) {
@@ -105,16 +143,17 @@ void LiveLife::Step() {
 
 bool LiveLife::IsLiveCell(const Point& p) {
     int accum =
-        (live_points_->find(Point((p.x - 1 + width_) % width_, (p.y - 1 + height_) % height_)) != live_points_->end()) +
-        (live_points_->find(Point((p.x - 1 + width_) % width_, p.y)) != live_points_->end()) +
-        (live_points_->find(Point((p.x - 1 + width_) % width_, (p.y + 1) % height_)) != live_points_->end()) +
-        (live_points_->find(Point(p.x, (p.y - 1 + height_) % height_)) != live_points_->end()) +
-        (live_points_->find(Point(p.x, p.y)) != live_points_->end()) +
-        (live_points_->find(Point(p.x, (p.y + 1) % height_)) != live_points_->end()) +
-        (live_points_->find(Point((p.x + 1) % width_, (p.y - 1 + height_) % height_)) != live_points_->end()) +
-        (live_points_->find(Point((p.x + 1) % width_, p.y)) != live_points_->end()) +
-        (live_points_->find(Point((p.x + 1) % width_, (p.y + 1) % height_)) != live_points_->end());
-    // If sum is 3, it must be live. If 4, it keeps current state.
+        (live_points_->find(Point(p.x - 1, p.y - 1)) != live_points_->end()) +
+        (live_points_->find(Point(p.x - 1, p.y - 0)) != live_points_->end()) +
+        (live_points_->find(Point(p.x - 1, p.y + 1)) != live_points_->end()) +
+        (live_points_->find(Point(p.x - 0, p.y - 1)) != live_points_->end()) +
+        (live_points_->find(Point(p.x - 0, p.y - 0)) != live_points_->end()) +
+        (live_points_->find(Point(p.x - 0, p.y + 1)) != live_points_->end()) +
+        (live_points_->find(Point(p.x + 1, p.y - 1)) != live_points_->end()) +
+        (live_points_->find(Point(p.x + 1, p.y - 0)) != live_points_->end()) +
+        (live_points_->find(Point(p.x + 1, p.y + 1)) != live_points_->end());
+    // If sum is 3, it must be live (either 2 neighbors + self or 3 neighbors).
+    // If 4, it keeps current state (either 3 neighbors and alive, or 4 neighbors and dead).
     return accum == 3 || (accum == 4 && live_points_->find(p) != live_points_->end());
 }
 
