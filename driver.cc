@@ -10,6 +10,7 @@
 static bool paused = false;
 static std::unique_ptr<conway::Life> life;
 static int scaleFactor = 54;
+static int delay_ms = 100;
 
 void displayCallback() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -32,7 +33,7 @@ void timerCallback(int unused) {
     if (!paused) {
         life->Step();
     }
-    glutTimerFunc(100, timerCallback, 0);
+    glutTimerFunc(delay_ms, timerCallback, 0);
     glutPostRedisplay();
 }
 
@@ -43,6 +44,12 @@ void keyCallback(unsigned char key, int x, int y) {
             break;
         case '-':
             scaleFactor = std::max(0, scaleFactor - 1);
+            break;
+        case '{':
+            delay_ms += 10;
+            break;
+        case '}':
+            delay_ms = std::max(0, delay_ms - 10);
             break;
         case 'p':
             paused = !paused;
@@ -83,7 +90,7 @@ int main(int argc, char** argv) {
 
     glClearColor(0.0,0.0,0.3,1.0);
     glutDisplayFunc(displayCallback);
-    glutTimerFunc(100, timerCallback, 0);
+    glutTimerFunc(delay_ms, timerCallback, 0);
     glutKeyboardFunc(keyCallback);
 
     glutMainLoop();
