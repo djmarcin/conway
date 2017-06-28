@@ -39,6 +39,11 @@ void timerCallback(int unused) {
     glutPostRedisplay();
 }
 
+void fpsCallback(int unused) {
+    std::cout << "Generation: " << life->generation() << std::endl;
+    glutTimerFunc(1000, fpsCallback, 0);
+}
+
 void PrintLivePoints() {
     for (const conway::Point p : life->LivePoints()) {
         std::cout << "LivePoint: (" << p.x << ", " << p.y << ")" << std::endl;
@@ -133,31 +138,12 @@ int main(int argc, char** argv) {
 
     //std::unique_ptr<conway::Life> life(new conway::ArrayLife(256, 256));
     life.reset(new conway::LiveLife(1L<<40, 1L<<40));
-    // // Glider
-    // life->AddLivePoint(conway::Point(0,10));
-    // life->AddLivePoint(conway::Point(1,10));
-    // life->AddLivePoint(conway::Point(2,10));
-    // life->AddLivePoint(conway::Point(2,11));
-    // life->AddLivePoint(conway::Point(1,12));
-    // // Oscillators
-    // life->AddLivePoint(conway::Point(20,4));
-    // life->AddLivePoint(conway::Point(20,5));
-    // life->AddLivePoint(conway::Point(20,6));
-    // life->AddLivePoint(conway::Point(24,6));
-    // life->AddLivePoint(conway::Point(25,6));
-    // life->AddLivePoint(conway::Point(26,6));
-    // // R-pentomino
-    // life->AddLivePoint(conway::Point(3,1));
-    // life->AddLivePoint(conway::Point(3,2));
-    // life->AddLivePoint(conway::Point(3,3));
-    // life->AddLivePoint(conway::Point(4,3));
-    // life->AddLivePoint(conway::Point(2,2));
-
     ParseInput(life.get());
 
     glClearColor(0.0,0.0,0.3,1.0);
     glutDisplayFunc(displayCallback);
     glutTimerFunc(delay_ms, timerCallback, 0);
+    glutTimerFunc(1000, fpsCallback, 0);
     glutKeyboardFunc(keyCallback);
 
     glutMainLoop();

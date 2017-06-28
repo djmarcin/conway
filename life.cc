@@ -20,7 +20,7 @@ void ArrayLife::AddLivePoint(const Point& p) {
     INDEX(matrix_, p.x, p.y) = 1;
 }
 
-void ArrayLife::Step() {
+void ArrayLife::DoStep() {
     for (int64_t y = 0; y < height_; y++) {
         for (int64_t x = 0; x < width_; x++) {
             int accum =
@@ -64,21 +64,19 @@ void ArrayLife::Print() {
     }
 }
 
-LiveLife::LiveLife(int64_t height, int64_t width) : Life(height, width) {
-    live_points_ = new std::unordered_set<Point>();
-    new_live_points_ = new std::unordered_set<Point>();
-}
+LiveLife::LiveLife(int64_t height, int64_t width) :
+    Life(height, width),
+    live_points_(new std::unordered_set<Point>()),
+    new_live_points_(new std::unordered_set<Point>()),
+    checked_(new std::unordered_set<Point>()) {}
 
-LiveLife::~LiveLife() {
-    delete new_live_points_;
-    delete live_points_;
-}
+LiveLife::~LiveLife() {}
 
 void LiveLife::AddLivePoint(const Point& p) {
     live_points_->insert(p);
 }
 
-// void LiveLife::Step() {
+// void LiveLife::DoStep() {
 //     std::unordered_set<Point> to_check;
 //     // Add all possibly affected points as well.
 //     for (auto p : LivePoints()) {
@@ -120,24 +118,25 @@ void LiveLife::AddLivePoint(const Point& p) {
 // }
 
 // This version does not care about overflow because it uses the entire int64 space.
-void LiveLife::Step() {
-    std::unordered_set<Point> to_check;
+void LiveLife::DoStep() {
+    checked_->clear();
+    checked_->reserve(live_points_->size() * 9 * 2);
     // Add all possibly affected points as well.
-    for (auto p : LivePoints()) {
+    for (auto p : *live_points_) {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
-                to_check.insert(Point(p.x + dx, p.y + dy));
+                Point to_check(p.x + dx, p.y + dy);
+                if (checked_->find(to_check) != checked_->end()) {
+                    continue;
+                }
+                checked_->insert(to_check);
+                if (IsLiveCell(to_check)) {
+                    new_live_points_->insert(to_check);
+                }
             }
         }
     }
-    for (auto p : to_check) {
-        if (IsLiveCell(p)) {
-            new_live_points_->insert(p);
-        }
-    }
-    auto* temp = live_points_;
-    live_points_ = new_live_points_;
-    new_live_points_ = temp;
+    live_points_.swap(new_live_points_);
     new_live_points_->clear();
 }
 

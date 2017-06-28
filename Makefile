@@ -1,6 +1,6 @@
 CC = g++
 DEBUG = -g
-CFLAGS = -std=c++11 -Wall -Wno-deprecated -c $(DEBUG)
+CFLAGS = -std=c++11 -Wall -Wno-deprecated -c -O2 $(DEBUG)
 LFLAGS = -std=c++11 -Wall $(DEBUG)
 
 OBJS = life.o driver.o

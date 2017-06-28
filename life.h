@@ -39,16 +39,25 @@ class Life {
     protected:
     int64_t height_;
     int64_t width_;
+    int64_t generation_;
 
     public:
-    Life(int64_t height, int64_t width) : height_(height), width_(width) {}
+    Life(int64_t height, int64_t width) : height_(height), width_(width), generation_(0) {}
+
+    int64_t generation() { return generation_; }
 
     virtual void AddLivePoint(const Point& p) = 0;
     void AddLivePoint(int64_t x, int64_t y) { this->AddLivePoint(Point(x, y)); }
-    virtual void Step() = 0;
+    void Step() {
+        generation_ += 1;
+        this->DoStep();
+    }
 
     virtual std::vector<const Point> LivePoints() = 0;
     virtual void Print() = 0;
+
+    protected:
+    virtual void DoStep() = 0;
 };
 
 class ArrayLife : public Life  {
@@ -60,24 +69,29 @@ class ArrayLife : public Life  {
     ~ArrayLife();
 
     void AddLivePoint(const Point& p) override;
-    void Step() override;
 
     std::vector<const Point> LivePoints() override;
     void Print() override;
+
+    protected:
+    void DoStep() override;
 };
 
 class LiveLife : public Life {
-    std::unordered_set<Point>* live_points_;
-    std::unordered_set<Point>* new_live_points_;
+    std::unique_ptr<std::unordered_set<Point>> live_points_;
+    std::unique_ptr<std::unordered_set<Point>> new_live_points_;
+    std::unique_ptr<std::unordered_set<Point>> checked_;
 
     public:
     LiveLife(int64_t height, int64_t width);
     ~LiveLife();
 
     void AddLivePoint(const Point& p) override;
-    void Step() override;
     std::vector<const Point> LivePoints() override;
     void Print() override;
+
+    protected:
+    void DoStep() override;
 
     private:
     bool IsLiveCell(const Point& p);
