@@ -36,7 +36,11 @@ void timerCallback(int unused) {
         life->Step();
     }
     glutTimerFunc(delay_ms, timerCallback, 0);
+}
+
+void displayRateCallback(int unused) {
     glutPostRedisplay();
+    glutTimerFunc(30, displayRateCallback, 0);
 }
 
 void fpsCallback(int unused) {
@@ -142,6 +146,7 @@ int main(int argc, char** argv) {
 
     glClearColor(0.0,0.0,0.3,1.0);
     glutDisplayFunc(displayCallback);
+    glutTimerFunc(30, displayRateCallback, 0);
     glutTimerFunc(delay_ms, timerCallback, 0);
     glutTimerFunc(1000, fpsCallback, 0);
     glutKeyboardFunc(keyCallback);
