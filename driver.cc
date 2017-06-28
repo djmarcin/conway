@@ -1,13 +1,15 @@
 #include <algorithm>
+#include <fstream>
 #include <memory>
 #include <iostream>
+#include <regex>
 
 #include <unistd.h>
 #include <GLUT/glut.h>
 
 #include "life.h"
 
-static bool paused = false;
+static bool paused = true;
 static std::unique_ptr<conway::Life> life;
 static int scaleFactor = 54;
 static int delay_ms = 100;
@@ -37,6 +39,12 @@ void timerCallback(int unused) {
     glutPostRedisplay();
 }
 
+void PrintLivePoints() {
+    for (const conway::Point p : life->LivePoints()) {
+        std::cout << "LivePoint: (" << p.x << ", " << p.y << ")" << std::endl;
+    }
+}
+
 void keyCallback(unsigned char key, int x, int y) {
     switch (key) {
         case '+':
@@ -53,8 +61,65 @@ void keyCallback(unsigned char key, int x, int y) {
             break;
         case 'p':
             paused = !paused;
+            break;
+        case 's':
+            life->Step();
+            break;
+        case 'l':
+            PrintLivePoints();
+            break;
         default:
             break;
+    }
+}
+
+void ParseInput(conway::Life* life) {
+    std::regex comment_re("#.*");
+    std::regex header_re("x = ([0-9]+), y = ([0-9]+).*");
+    std::regex rle_re("(?:(?:[0-9]+)?(?:[ob$])|!)");
+    std::regex rle_token_re("([0-9]+)([ob$])");
+    std::smatch match;
+    int x, y;
+    int x_pos, y_pos;
+
+    std::ifstream in("rle/noahsark.rle");
+    std::string line;
+    while (std::getline(in, line)) {
+        if (std::regex_match(line, match, comment_re)) {
+            continue;
+        } else if (std::regex_match(line, match, header_re)) {
+            x = std::stoi(match[1].str());
+            y = std::stoi(match[2].str());
+            x_pos = -x / 2;
+            y_pos = y / 2;
+        } else {
+            std::sregex_iterator next(line.begin(), line.end(), rle_re);
+            std::sregex_iterator end;
+            while (next != end) {
+                std::string token = next->str();
+                if (token == "o" || token == "b" || token == "$") {
+                    token = "1" + token;
+                }
+                if (std::regex_match(token, match, rle_token_re)) {
+                    int n = std::stoi(match[1].str());
+                    std::string type = match[2].str();
+                    if (type == "b") {
+                        x_pos += n;
+                    } else if (type == "o") {
+                        for (int i = 0; i < n; i++) {
+                            life->AddLivePoint(x_pos++, y_pos);
+                        }
+                    } else if (type == "$") {
+                        x_pos = -x / 2;
+                        y_pos -= n;
+                    }
+                }
+                if (token == "!") {
+                    return;
+                }
+                next++;
+            }
+        }
     }
 }
 
@@ -81,12 +146,14 @@ int main(int argc, char** argv) {
     // life->AddLivePoint(conway::Point(24,6));
     // life->AddLivePoint(conway::Point(25,6));
     // life->AddLivePoint(conway::Point(26,6));
-    // R-pentomino
-    life->AddLivePoint(conway::Point(3,1));
-    life->AddLivePoint(conway::Point(3,2));
-    life->AddLivePoint(conway::Point(3,3));
-    life->AddLivePoint(conway::Point(4,3));
-    life->AddLivePoint(conway::Point(2,2));
+    // // R-pentomino
+    // life->AddLivePoint(conway::Point(3,1));
+    // life->AddLivePoint(conway::Point(3,2));
+    // life->AddLivePoint(conway::Point(3,3));
+    // life->AddLivePoint(conway::Point(4,3));
+    // life->AddLivePoint(conway::Point(2,2));
+
+    ParseInput(life.get());
 
     glClearColor(0.0,0.0,0.3,1.0);
     glutDisplayFunc(displayCallback);

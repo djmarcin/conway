@@ -44,6 +44,7 @@ class Life {
     Life(int64_t height, int64_t width) : height_(height), width_(width) {}
 
     virtual void AddLivePoint(const Point& p) = 0;
+    void AddLivePoint(int64_t x, int64_t y) { this->AddLivePoint(Point(x, y)); }
     virtual void Step() = 0;
 
     virtual std::vector<const Point> LivePoints() = 0;
