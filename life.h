@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -78,10 +79,6 @@ class ArrayLife : public Life  {
 };
 
 class LiveLife : public Life {
-    std::unique_ptr<std::unordered_set<Point>> live_points_;
-    std::unique_ptr<std::unordered_set<Point>> new_live_points_;
-    std::unique_ptr<std::unordered_set<Point>> checked_;
-
     public:
     LiveLife(int64_t height, int64_t width);
     ~LiveLife();
@@ -95,6 +92,9 @@ class LiveLife : public Life {
 
     private:
     bool IsLiveCell(const Point& p);
+
+    std::unique_ptr<std::vector<const Point>> live_points_;
+    std::unique_ptr<std::unordered_map<Point, int>> weights_;
 };
 
 }  // namespace conway

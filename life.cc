@@ -64,110 +64,58 @@ void ArrayLife::Print() {
     }
 }
 
-LiveLife::LiveLife(int64_t height, int64_t width) :
-    Life(height, width),
-    live_points_(new std::unordered_set<Point>()),
-    new_live_points_(new std::unordered_set<Point>()),
-    checked_(new std::unordered_set<Point>()) {}
+LiveLife::LiveLife(int64_t height, int64_t width)
+    : Life(height, width),
+      live_points_(new std::vector<const Point>()),
+      weights_(new std::unordered_map<Point, int>()) {
+    // Picked via experimentation.
+    weights_->max_load_factor(0.33);
+}
 
 LiveLife::~LiveLife() {}
 
 void LiveLife::AddLivePoint(const Point& p) {
-    live_points_->insert(p);
+    live_points_->push_back(p);
 }
-
-// void LiveLife::DoStep() {
-//     std::unordered_set<Point> to_check;
-//     // Add all possibly affected points as well.
-//     for (auto p : LivePoints()) {
-//         to_check.insert(Point((p.x - 1 + width_) % width_, (p.y - 1 + height_) % height_));
-//         to_check.insert(Point((p.x - 1 + width_) % width_, p.y));
-//         to_check.insert(Point((p.x - 1 + width_) % width_, (p.y + 1) % height_));
-//         to_check.insert(Point(p.x, (p.y - 1 + height_) % height_));
-//         to_check.insert(Point(p.x, p.y));
-//         to_check.insert(Point(p.x, (p.y + 1) % height_));
-//         to_check.insert(Point((p.x + 1) % width_, (p.y - 1 + height_) % height_));
-//         to_check.insert(Point((p.x + 1) % width_, p.y));
-//         to_check.insert(Point((p.x + 1) % width_, (p.y + 1) % height_));
-//     }
-//     for (auto p : to_check) {
-//         if (IsLiveCell(p)) {
-//             new_live_points_->insert(p);
-//         }
-//     }
-//     auto* temp = live_points_;
-//     live_points_ = new_live_points_;
-//     new_live_points_ = temp;
-//     new_live_points_->clear();
-// }
-//
-// bool LiveLife::IsLiveCell(const Point& p) {
-//     int accum =
-//         (live_points_->find(Point((p.x - 1 + width_) % width_, (p.y - 1 + height_) % height_)) != live_points_->end()) +
-//         (live_points_->find(Point((p.x - 1 + width_) % width_, p.y)) != live_points_->end()) +
-//         (live_points_->find(Point((p.x - 1 + width_) % width_, (p.y + 1) % height_)) != live_points_->end()) +
-//         (live_points_->find(Point(p.x, (p.y - 1 + height_) % height_)) != live_points_->end()) +
-//         (live_points_->find(Point(p.x, p.y)) != live_points_->end()) +
-//         (live_points_->find(Point(p.x, (p.y + 1) % height_)) != live_points_->end()) +
-//         (live_points_->find(Point((p.x + 1) % width_, (p.y - 1 + height_) % height_)) != live_points_->end()) +
-//         (live_points_->find(Point((p.x + 1) % width_, p.y)) != live_points_->end()) +
-//         (live_points_->find(Point((p.x + 1) % width_, (p.y + 1) % height_)) != live_points_->end());
-//     // If sum is 3, it must be live (either 2 neighbors + self or 3 neighbors).
-//     // If 4, it keeps current state (either 3 neighbors and alive, or 4 neighbors and dead).
-//     return accum == 3 || (accum == 4 && live_points_->find(p) != live_points_->end());
-// }
 
 // This version does not care about overflow because it uses the entire int64 space.
 void LiveLife::DoStep() {
-    checked_->clear();
-    checked_->reserve(live_points_->size() * 9 * 2);
-    // Add all possibly affected points as well.
+    // For each live point, add 1 influence to the surrounding 8 cells.
     for (auto p : *live_points_) {
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                Point to_check(p.x + dx, p.y + dy);
-                if (checked_->find(to_check) != checked_->end()) {
-                    continue;
-                }
-                checked_->insert(to_check);
-                if (IsLiveCell(to_check)) {
-                    new_live_points_->insert(to_check);
-                }
-            }
-        }
+        weights_->emplace(Point(p.x - 1, p.y - 1), 0).first->second++;
+        weights_->emplace(Point(p.x - 1, p.y - 0), 0).first->second++;
+        weights_->emplace(Point(p.x - 1, p.y + 1), 0).first->second++;
+        weights_->emplace(Point(p.x - 0, p.y - 1), 0).first->second++;
+        // Add 1+10 to signal this cell was alive so we don't need to look it up later.
+        weights_->emplace(Point(p.x - 0, p.y - 0), 0).first->second += 11;
+        weights_->emplace(Point(p.x - 0, p.y + 1), 0).first->second++;
+        weights_->emplace(Point(p.x + 1, p.y - 1), 0).first->second++;
+        weights_->emplace(Point(p.x + 1, p.y - 0), 0).first->second++;
+        weights_->emplace(Point(p.x + 1, p.y + 1), 0).first->second++;
     }
-    live_points_.swap(new_live_points_);
-    new_live_points_->clear();
-}
-
-bool LiveLife::IsLiveCell(const Point& p) {
-    int accum =
-        (live_points_->find(Point(p.x - 1, p.y - 1)) != live_points_->end()) +
-        (live_points_->find(Point(p.x - 1, p.y - 0)) != live_points_->end()) +
-        (live_points_->find(Point(p.x - 1, p.y + 1)) != live_points_->end()) +
-        (live_points_->find(Point(p.x - 0, p.y - 1)) != live_points_->end()) +
-        (live_points_->find(Point(p.x - 0, p.y - 0)) != live_points_->end()) +
-        (live_points_->find(Point(p.x - 0, p.y + 1)) != live_points_->end()) +
-        (live_points_->find(Point(p.x + 1, p.y - 1)) != live_points_->end()) +
-        (live_points_->find(Point(p.x + 1, p.y - 0)) != live_points_->end()) +
-        (live_points_->find(Point(p.x + 1, p.y + 1)) != live_points_->end());
-    // If sum is 3, it must be live (either 2 neighbors + self or 3 neighbors).
-    // If 4, it keeps current state (either 3 neighbors and alive, or 4 neighbors and dead).
-    return accum == 3 || (accum == 4 && live_points_->find(p) != live_points_->end());
+    live_points_->clear();
+    for (auto it = weights_->begin(); it != weights_->end();) {
+        // Basic generational garbage collection --
+        // if the weight is still zero on this generation, erase it.
+        // Helps minimize memory allocations because most points need
+        // to be rechecked from generation to generation.
+        if (it->second == 0) {
+            it = weights_->erase(it);
+            continue;
+        }
+        if (it->second == 3 || it->second == 13 || it->second == 14) {
+            live_points_->push_back(it->first);
+        }
+        it->second = 0;
+        it++;
+    }
 }
 
 std::vector<const Point> LiveLife::LivePoints() {
-    return std::vector<const Point>(live_points_->begin(), live_points_->end());
+    return *live_points_;
 }
 
-void LiveLife::Print() {
-    std::cout << "-------------------------------------" << std::endl;
-    for (int64_t y = height_ - 1; y >= 0 ; y--) {
-        for (int64_t x = 0; x < width_; x++) {
-            std::cout << (live_points_->find(Point(x, y)) != live_points_->end() ? "*" : " ");
-        }
-        std::cout << std::endl;
-    }
-}
+// Not implemented
+void LiveLife::Print() {}
 
 }  // namespace conway
