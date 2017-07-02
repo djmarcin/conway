@@ -25,11 +25,13 @@ struct Point {
 
 namespace std {
 template <>
-struct hash<conway::Point> {
-    hash<int64_t> int64_hash;
-
+struct hash<const conway::Point> {
     size_t operator() (const conway::Point& p) const {
-        return 31 * int64_hash(p.x) ^ int64_hash(p.y);  // Vaguely stolen from Java.
+        hash<int64_t> int64_hash;
+        size_t hash = 17;
+        hash = 31 * hash + int64_hash(p.x);
+        hash = 31 * hash + int64_hash(p.y);
+        return hash;
     }
 };
 }  // namespace std
@@ -94,7 +96,7 @@ class LiveLife : public Life {
     bool IsLiveCell(const Point& p);
 
     std::unique_ptr<std::vector<const Point>> live_points_;
-    std::unique_ptr<std::unordered_map<Point, int>> weights_;
+    std::unique_ptr<std::unordered_map<const Point, int>> weights_;
 };
 
 }  // namespace conway

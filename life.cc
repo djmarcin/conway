@@ -67,7 +67,7 @@ void ArrayLife::Print() {
 LiveLife::LiveLife(int64_t height, int64_t width)
     : Life(height, width),
       live_points_(new std::vector<const Point>()),
-      weights_(new std::unordered_map<Point, int>()) {
+      weights_(new std::unordered_map<const Point, int>()) {
     // Picked via experimentation.
     weights_->max_load_factor(0.33);
 }
