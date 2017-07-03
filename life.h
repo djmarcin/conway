@@ -1,6 +1,7 @@
 #ifndef CONWAY_LIFE_H
 #define CONWAY_LIFE_H
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <unordered_map>
@@ -27,8 +28,8 @@ namespace std {
 template <>
 struct hash<const conway::Point> {
     size_t operator() (const conway::Point& p) const {
-        hash<int64_t> int64_hash;
-        size_t hash = 17;
+        hash<char> int64_hash;
+        char hash = 17;
         hash = 31 * hash + int64_hash(p.x);
         hash = 31 * hash + int64_hash(p.y);
         return hash;
@@ -97,6 +98,34 @@ class LiveLife : public Life {
 
     std::unique_ptr<std::vector<const Point>> live_points_;
     std::unique_ptr<std::unordered_map<const Point, int>> weights_;
+};
+
+class BlockLife : public Life {
+    public:
+    BlockLife(int64_t height, int64_t width);
+    ~BlockLife();
+
+    void AddLivePoint(const Point& p) override;
+    std::vector<const Point> LivePoints() override;
+    void Print() override;
+
+    protected:
+    void DoStep() override;
+
+    private:
+    static const int BLOCK_SHIFT = 5;
+    static const int BLOCK_DIM = 1 << BLOCK_SHIFT;
+    static const int64_t BLOCK_MASK = ~((1 << BLOCK_SHIFT) - 1);
+    typedef std::array<char, BLOCK_DIM * BLOCK_DIM> BlockArray;
+    static const BlockArray EMPTY_BLOCK;
+
+    void DoStepForBlock(const Point& p, const BlockArray& block);
+    Point toBlockIndex(const Point& p);
+    Point toBlockCoordinates(const Point& p);
+
+    // Holds a 32x32 block of points.
+    std::unique_ptr<std::unordered_map<const Point, BlockArray>> blocks_;
+    std::unique_ptr<std::unordered_map<const Point, BlockArray>> new_blocks_;
 };
 
 }  // namespace conway
