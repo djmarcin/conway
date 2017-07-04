@@ -58,27 +58,9 @@ class Life {
     }
 
     virtual std::vector<const Point> LivePoints() = 0;
-    virtual void Print() = 0;
 
     protected:
     virtual void DoStep() = 0;
-};
-
-class ArrayLife : public Life  {
-    char* matrix_;
-    char* temp_;
-
-    public:
-    ArrayLife(int64_t height, int64_t width);
-    ~ArrayLife();
-
-    void AddLivePoint(const Point& p) override;
-
-    std::vector<const Point> LivePoints() override;
-    void Print() override;
-
-    protected:
-    void DoStep() override;
 };
 
 class LiveLife : public Life {
@@ -88,7 +70,6 @@ class LiveLife : public Life {
 
     void AddLivePoint(const Point& p) override;
     std::vector<const Point> LivePoints() override;
-    void Print() override;
 
     protected:
     void DoStep() override;
@@ -107,7 +88,6 @@ class BlockLife : public Life {
 
     void AddLivePoint(const Point& p) override;
     std::vector<const Point> LivePoints() override;
-    void Print() override;
 
     protected:
     void DoStep() override;

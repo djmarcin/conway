@@ -5,65 +5,6 @@
 
 namespace conway {
 
-ArrayLife::ArrayLife(int64_t height, int64_t width) : Life(height, width) {
-    matrix_ = (char*)calloc(sizeof(char) * height_ * width_, sizeof(char));
-    temp_ = (char*)calloc(sizeof(char) * height_ * width_, sizeof(char));
-}
-
-ArrayLife::~ArrayLife() {
-    free(temp_);
-    free(matrix_);
-}
-
-#define INDEX(m, x, y) m[(y) * width_ + (x)]
-void ArrayLife::AddLivePoint(const Point& p) {
-    INDEX(matrix_, p.x, p.y) = 1;
-}
-
-void ArrayLife::DoStep() {
-    for (int64_t y = 0; y < height_; y++) {
-        for (int64_t x = 0; x < width_; x++) {
-            int accum =
-                INDEX(matrix_, (x - 1 + width_) % width_, (y - 1 + height_) % height_) +
-                INDEX(matrix_, (x - 1 + width_) % width_, y) +
-                INDEX(matrix_, (x - 1 + width_) % width_, (y + 1) % height_) +
-                INDEX(matrix_, x, (y - 1 + height_) % height_) +
-                INDEX(matrix_, x, y) +
-                INDEX(matrix_, x, (y + 1) % height_) +
-                INDEX(matrix_, (x + 1) % width_, (y - 1 + height_) % height_) +
-                INDEX(matrix_, (x + 1) % width_, y) +
-                INDEX(matrix_, (x + 1) % width_, (y + 1) % height_);
-            INDEX(temp_, x, y) = accum == 3 ? 1 : accum == 4 ? INDEX(matrix_, x, y) : 0;
-        }
-    }
-    // Swap pointers
-    char* t = matrix_;
-    matrix_ = temp_;
-    temp_ = t;
-}
-
-std::vector<const Point> ArrayLife::LivePoints() {
-    std::vector<const Point> live_points;
-    for (int64_t y = 0; y < height_; y++) {
-        for (int64_t x = 0; x < width_; x++) {
-            if (INDEX(matrix_, x, y)) {
-                live_points.emplace_back(x, y);
-            }
-        }
-    }
-    return live_points;
-}
-
-void ArrayLife::Print() {
-    std::cout << "-------------------------------------" << std::endl;
-    for (int64_t y = height_ - 1; y >= 0 ; y--) {
-        for (int64_t x = 0; x < width_; x++) {
-            std::cout << (INDEX(matrix_, x, y) ? "*" : " ");
-        }
-        std::cout << std::endl;
-    }
-}
-
 LiveLife::LiveLife(int64_t height, int64_t width)
     : Life(height, width),
       live_points_(new std::vector<const Point>()),
@@ -78,7 +19,11 @@ void LiveLife::AddLivePoint(const Point& p) {
     live_points_->push_back(p);
 }
 
-// This version does not care about overflow because it uses the entire int64 space.
+// Iterates over all the live points and applies influence to the 3x3 block surrounding it.
+// Influence is stored in a hashtable which means we require 9 hashtable lookups per live point.
+// Afterwards, we iterate over the hashtable and replace the live_points_ vector with those points.
+// The main benefit of this algorithm over a matrix based algorithm is that memory usage scales
+// with number of points and not size of the board.
 void LiveLife::DoStep() {
     // For each live point, add 1 influence to the surrounding 8 cells.
     for (auto p : *live_points_) {
@@ -97,7 +42,7 @@ void LiveLife::DoStep() {
     for (auto it = weights_->begin(); it != weights_->end();) {
         // Basic generational garbage collection --
         // if the weight is still zero on this generation, erase it.
-        // Helps minimize memory allocations because most points need
+        // Helps reduce memory allocations because most points need
         // to be rechecked from generation to generation.
         if (it->second == 0) {
             it = weights_->erase(it);
@@ -115,8 +60,6 @@ std::vector<const Point> LiveLife::LivePoints() {
     return *live_points_;
 }
 
-// Not implemented
-void LiveLife::Print() {}
 
 const BlockLife::BlockArray BlockLife::EMPTY_BLOCK = BlockArray{{0}};
 
@@ -147,20 +90,30 @@ void BlockLife::DoStep() {
         DoStepForBlock(p.first, p.second);
     }
 
-    blocks_->clear();
-    for (auto& p : *new_blocks_) {
+    // Iterate over new_blocks_ converting weights into live and dead points.
+    // Remove any blocks that do not have any live points so we don't have bother checking them next generation.
+    for (auto it = new_blocks_->begin(); it != new_blocks_->end();) {
         bool block_has_points = false;
-        for (int i = 0; i < p.second.size(); i++) {
-            p.second[i] = p.second[i] == 3 || p.second[i] == 13 || p.second[i] == 14;
-            block_has_points |= p.second[i];
+        for (int i = 0; i < it->second.size(); i++) {
+            it->second[i] = it->second[i] == 3 || it->second[i] == 13 || it->second[i] == 14;
+            block_has_points |= it->second[i];
         }
-        if (block_has_points) {
-            blocks_->insert(p);
+        if (!block_has_points) {
+            it = new_blocks_->erase(it);
+        } else {
+            ++it;
         }
     }
+    new_blocks_.swap(blocks_);
     new_blocks_->clear();
 }
 
+// Apply influence to each block of 9 cells around any live cell.
+// Uses a 32x32 (1024 byte) block of memory which eliminates the need for hashtable
+// lookups for the inner 30x30 square and reduces the number of hashtable lookups
+// for the outer region to just one per neighboring region.
+// Like LiveLife, this supports much larger boards than the simple matrix based approach,
+// but it trades additional memory use and unrolled loops for speed in computing the next generation.
 void BlockLife::DoStepForBlock(const Point& block_index, const BlockArray& block) {
     BlockArray *b1,*b2,*b3;
     BlockArray *b4,*b5,*b6;
@@ -196,7 +149,7 @@ void BlockLife::DoStepForBlock(const Point& block_index, const BlockArray& block
                 (*b5)[(y - 1) * BLOCK_DIM + (x - 0)] += 1;
                 (*b5)[(y - 1) * BLOCK_DIM + (x + 1)] += 1;
                 (*b5)[(y - 0) * BLOCK_DIM + (x - 1)] += 1;
-                (*b5)[(y - 0) * BLOCK_DIM + (x - 0)] += 11;  // Add 10 more so we don't have to look this point up again.
+                (*b5)[(y - 0) * BLOCK_DIM + (x - 0)] += 11;  // Same +10 trick as above.
                 (*b5)[(y - 0) * BLOCK_DIM + (x + 1)] += 1;
                 (*b5)[(y + 1) * BLOCK_DIM + (x - 1)] += 1;
                 (*b5)[(y + 1) * BLOCK_DIM + (x - 0)] += 1;
@@ -320,13 +273,10 @@ void BlockLife::DoStepForBlock(const Point& block_index, const BlockArray& block
 
 std::vector<const Point> BlockLife::LivePoints() {
     std::vector<const Point> live_points;
-    //printf("blocks_->size(): %lu\n", blocks_->size());
     for (auto pair : *blocks_) {
-        // printf("block_index (%lld, %lld)\n", pair.first.x, pair.first.y);
         for (int y = 0; y < BLOCK_DIM; y++) {
             for (int x = 0; x < BLOCK_DIM; x++) {
                 if (pair.second[y * BLOCK_DIM + x] == 1) {
-                    // printf("LivePoint: (%lld, %lld)\n", pair.first.x + x, pair.first.y + y);
                     live_points.emplace_back(pair.first.x + x, pair.first.y + y);
                 }
             }
@@ -334,7 +284,5 @@ std::vector<const Point> BlockLife::LivePoints() {
     }
     return live_points;
 }
-
-void BlockLife::Print() {}
 
 }  // namespace conway

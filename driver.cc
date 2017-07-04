@@ -1,33 +1,44 @@
 #include <algorithm>
 #include <fstream>
+#include <cmath>
 #include <memory>
 #include <iostream>
 #include <regex>
 
-#include <unistd.h>
 #include <GLUT/glut.h>
 
 #include "life.h"
 
 static bool paused = true;
 static std::unique_ptr<conway::Life> life;
-static int scaleFactor = 54;
+static int scaleFactor = 8;
 static int delay_ms = 100;
+static std::pair<double, double> viewport_center{0, 0};
 
 void displayCallback() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
-    gluOrtho2D(-1,1,-1,1);
+
+    std::pair<double, double> x_range = std::make_pair(viewport_center.first - pow(2, scaleFactor - 1), viewport_center.first + pow(2, scaleFactor - 1));
+    std::pair<double, double> y_range = std::make_pair(viewport_center.second - pow(2, scaleFactor - 1), viewport_center.second + pow(2, scaleFactor - 1));
+    gluOrtho2D(x_range.first, x_range.second, y_range.first, y_range.second);
 
     glBegin(GL_POINTS);
     glColor4f(1.0, 1.0, 1.0, 1.0);
-    for (auto p : life->LivePoints()) {
-        double x = p.x / (double)(std::numeric_limits<int64_t>::max() / (1L << scaleFactor));
-        double y = p.y / (double)(std::numeric_limits<int64_t>::max() / (1L << scaleFactor));
-        glVertex2d(x, y);
+    for (const auto& p : life->LivePoints()) {
+        glVertex2d(p.x, p.y);
     }
     glEnd();
 
+    glRasterPos2d(x_range.first + 0.02 * (viewport_center.first - x_range.first),
+                  y_range.second - 0.05 * (y_range.second - viewport_center.second));
+    char buf[512];
+    sprintf(buf, "Generation: %lld - Scale: 2^%d [(%lf, %lf), (%lf, %lf)] - Delay: %dms",
+            life->generation(), scaleFactor, x_range.first, y_range.second, x_range.second, y_range.first, delay_ms);
+    for (char c : buf) {
+        if (c == '\0') { break; }
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+    }
     glutSwapBuffers();
 }
 
@@ -57,10 +68,28 @@ void PrintLivePoints() {
 void keyCallback(unsigned char key, int x, int y) {
     switch (key) {
         case '+':
-            scaleFactor = std::min(56, scaleFactor + 1);
+            scaleFactor = std::max(8, scaleFactor - 1);
+            // correctZoom();
             break;
         case '-':
-            scaleFactor = std::max(0, scaleFactor - 1);
+            scaleFactor = std::min(64, scaleFactor + 1);
+            // correctZoom();
+            break;
+        case 'w':
+            viewport_center.second += 1L << (scaleFactor - 3);
+            // correctZoom();
+            break;
+        case 'a':
+            viewport_center.first -= 1L << (scaleFactor - 3);
+            // correctZoom();
+            break;
+        case 's':
+            viewport_center.second -= 1L << (scaleFactor - 3);
+            // correctZoom();
+            break;
+        case 'd':
+            viewport_center.first += 1L << (scaleFactor - 3);
+            // correctZoom();
             break;
         case '{':
             delay_ms += 10;
@@ -71,7 +100,7 @@ void keyCallback(unsigned char key, int x, int y) {
         case 'p':
             paused = !paused;
             break;
-        case 's':
+        case 'n':
             life->Step();
             break;
         case 'l':
@@ -82,7 +111,7 @@ void keyCallback(unsigned char key, int x, int y) {
     }
 }
 
-void ParseInput(conway::Life* life) {
+void LoadRLE(std::string filename, conway::Life* life) {
     std::regex comment_re("#.*");
     std::regex header_re("x = ([0-9]+), y = ([0-9]+).*");
     std::regex rle_re("(?:(?:[0-9]+)?(?:[ob$])|!)");
@@ -91,7 +120,7 @@ void ParseInput(conway::Life* life) {
     int x, y;
     int x_pos, y_pos;
 
-    std::ifstream in("rle/noahsark.rle");
+    std::ifstream in(filename);
     std::string line;
     while (std::getline(in, line)) {
         if (std::regex_match(line, match, comment_re)) {
@@ -141,8 +170,9 @@ int main(int argc, char** argv) {
     glutCreateWindow("Conway's Game of Life");
 
     //std::unique_ptr<conway::Life> life(new conway::ArrayLife(256, 256));
-    life.reset(new conway::LiveLife(1L<<40, 1L<<40));
-    ParseInput(life.get());
+    // life.reset(new conway::LiveLife(0, 0));
+    life.reset(new conway::BlockLife(0, 0));
+    LoadRLE("rle/noahsark.rle", life.get());
 
     glClearColor(0.0,0.0,0.3,1.0);
     glutDisplayFunc(displayCallback);
