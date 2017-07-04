@@ -161,6 +161,19 @@ void LoadRLE(std::string filename, conway::Life* life) {
     }
 }
 
+void ReadInput() {
+    std::regex point_re("[(](-?[0-9]+), (-?[0-9-]+)[)] *");
+    std::string line;
+    std::smatch match;
+    while (std::getline(std::cin, line)) {
+        if (std::regex_match(line, match, point_re)) {
+            life->AddLivePoint(std::stoll(match[1].str()), std::stoll(match[2].str()));
+        } else {
+            printf("Unrecognized line in input: %s\n", line.c_str());
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     std::cout << "Starting Conway!" << std::endl;
 
@@ -172,7 +185,11 @@ int main(int argc, char** argv) {
     //std::unique_ptr<conway::Life> life(new conway::ArrayLife(256, 256));
     // life.reset(new conway::LiveLife(0, 0));
     life.reset(new conway::BlockLife(0, 0));
-    LoadRLE("rle/noahsark.rle", life.get());
+    if (argc == 2) {
+        LoadRLE(argv[1], life.get());
+    } else {
+        ReadInput();
+    }
 
     glClearColor(0.0,0.0,0.3,1.0);
     glutDisplayFunc(displayCallback);
