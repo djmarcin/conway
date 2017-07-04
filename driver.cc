@@ -182,9 +182,8 @@ int main(int argc, char** argv) {
     glutInitWindowSize(800, 800);
     glutCreateWindow("Conway's Game of Life");
 
-    //std::unique_ptr<conway::Life> life(new conway::ArrayLife(256, 256));
-    // life.reset(new conway::LiveLife(0, 0));
-    life.reset(new conway::BlockLife(0, 0));
+    // life.reset(new conway::LiveLife());
+    life.reset(new conway::BlockLife());
     if (argc == 2) {
         LoadRLE(argv[1], life.get());
     } else {

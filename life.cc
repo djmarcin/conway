@@ -5,9 +5,8 @@
 
 namespace conway {
 
-LiveLife::LiveLife(int64_t height, int64_t width)
-    : Life(height, width),
-      live_points_(new std::vector<const Point>()),
+LiveLife::LiveLife()
+    : live_points_(new std::vector<const Point>()),
       weights_(new std::unordered_map<const Point, int>()) {
     // Picked via experimentation.
     weights_->max_load_factor(0.33);
@@ -63,9 +62,8 @@ std::vector<const Point> LiveLife::LivePoints() {
 
 const BlockLife::BlockArray BlockLife::EMPTY_BLOCK = BlockArray{{0}};
 
-BlockLife::BlockLife(int64_t height, int64_t width)
-  : Life(height, width),
-    blocks_(new std::unordered_map<const Point, BlockArray>()),
+BlockLife::BlockLife()
+  : blocks_(new std::unordered_map<const Point, BlockArray>()),
     new_blocks_(new std::unordered_map<const Point, BlockArray>()) {
 }
 
@@ -80,7 +78,7 @@ Point BlockLife::toBlockCoordinates(const Point& p) {
 }
 
 void BlockLife::AddLivePoint(const Point& p) {
-    BlockArray& block = blocks_->emplace(Point(p.x & BLOCK_MASK, p.y & BLOCK_MASK), EMPTY_BLOCK).first->second;
+    BlockArray& block = blocks_->emplace(toBlockIndex(p), EMPTY_BLOCK).first->second;
     Point blockCoord = toBlockCoordinates(p);
     block[blockCoord.y * BLOCK_DIM + blockCoord.x] = 1;
 }

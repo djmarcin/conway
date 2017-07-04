@@ -41,12 +41,10 @@ namespace conway {
 
 class Life {
     protected:
-    int64_t height_;
-    int64_t width_;
     int64_t generation_;
 
     public:
-    Life(int64_t height, int64_t width) : height_(height), width_(width), generation_(0) {}
+    Life() : generation_(0) {}
 
     int64_t generation() { return generation_; }
 
@@ -65,7 +63,7 @@ class Life {
 
 class LiveLife : public Life {
     public:
-    LiveLife(int64_t height, int64_t width);
+    LiveLife();
     ~LiveLife();
 
     void AddLivePoint(const Point& p) override;
@@ -83,7 +81,7 @@ class LiveLife : public Life {
 
 class BlockLife : public Life {
     public:
-    BlockLife(int64_t height, int64_t width);
+    BlockLife();
     ~BlockLife();
 
     void AddLivePoint(const Point& p) override;
