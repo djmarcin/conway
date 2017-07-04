@@ -15,4 +15,4 @@ driver.o : driver.cc life.h
 	$(CC) $(CFLAGS) driver.cc
 
 clean:
-	\rm *.o *~ life
+	rm -f *.o *~ life
